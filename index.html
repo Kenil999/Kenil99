@@ -2,117 +2,95 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Prompt Enhancer – Ultra Fast AI</title>
+<title>Prompt Enhancer – Gemma 2B</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- WebLLM runtime -->
 <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/dist/web-llm.min.js"></script>
 
 <style>
 body { font-family: Arial; padding: 20px; background: #fafafa; }
-.box { background: white; padding: 15px; border-radius: 10px;
-       box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-textarea { width: 100%; height: 140px; border: none; resize: none;
-           outline: none; font-size: 16px; }
-button { width: 100%; padding: 15px; background: black; color: white;
-         border: none; border-radius: 10px; cursor: pointer;
-         font-size: 18px; }
+.box { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+textarea { width: 100%; height: 140px; border: none; resize: none; outline: none; font-size: 16px; }
+button { width: 100%; padding: 15px; background: black; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 18px; }
 .hidden { display: none; }
 </style>
 </head>
 
 <body>
 
-<h2>AI Prompt Enhancer (Phi-3 Mini – Fast Mode)</h2>
+<h2>AI Prompt Enhancer (Gemma 2B)</h2>
 
 <div class="box">
 <textarea id="rawPrompt" placeholder="Type your raw prompt..."></textarea>
 </div>
 
-<button onclick="generateQuestions()">Refine Prompt</button>
+<button onclick="refinePrompt()">Generate Optimized Prompt</button>
 
-<div id="questionsBox" class="box hidden"></div>
 <div id="finalBox" class="box hidden"></div>
 
 <script>
 const SYSTEM_PROMPT = `
-You are an Expert Prompt Engineer. You improve raw user prompts with
-clarity, reasoning discipline, structure, and faithful intent preservation.
+You are an Expert Prompt Engineer. Your task is to transform a raw user prompt into a maximally optimized, structured, model-ready prompt.
 
-Your job:
-1. Generate 3 clear refinement questions.
-2. Then produce a structured optimized prompt:
+PROCESS:
+1. Generate EXACTLY 3 short internal refinement questions to better understand the user's intent.
+   • Do NOT show the questions to the user.
+   • Do NOT ask the user to answer.
+   • These questions are part of your reasoning.
+
+2. Immediately answer the 3 questions yourself using reasonable assumptions that do not alter the user's intent.
+
+3. Produce the final refined output in the following format and nothing else:
 
 STRUCTURED OPTIMIZED PROMPT
-- AI Role
-- Core Task
-- Constraints
-- Reasoning Instructions
-- Output Format
+AI Role:
+Core Task:
+Constraints:
+Reasoning Instructions:
+Output Format:
 
 KEY IMPROVEMENTS
-(Bullet points)
+• bullet point
+• bullet point
+• bullet point
 
-Rules:
-• Do not invent facts.
-• Expand only when helpful.
-• Preserve exact meaning.
-• Keep language simple and powerful.
+RULES:
+• Never output HTML tags.
+• Never add anything beyond the required structure.
+• Never fabricate unrelated facts.
+• Keep everything concise and purposeful.
 `;
 
 let chat;
 
-// Initialize Phi-3 Mini (VERY FAST)
+// Load Gemma 2B Instruct
 (async () => {
-    chat = await webllm.createChatSession("Phi-3-mini-4k-instruct-q4f16_1-MLC");
+    chat = await webllm.createChatSession("gemma-2b-it-q4f16_1-MLC");
 })();
-  
+
 async function runModel(prompt) {
     const reply = await chat.generate(prompt);
     return reply;
 }
 
-async function generateQuestions() {
+async function refinePrompt() {
     const raw = document.getElementById("rawPrompt").value.trim();
     if (!raw) return;
 
-    document.getElementById("questionsBox").classList.remove("hidden");
-    document.getElementById("questionsBox").innerHTML =
-        "Loading model or thinking... (first run takes a few seconds)";
-
-    const qPrompt = `${SYSTEM_PROMPT}
-
-User raw prompt:
-${raw}
-
-TASK: Produce EXACTLY 3 refinement questions.`;
-
-    const questions = await runModel(qPrompt);
-
-    document.getElementById("questionsBox").innerHTML =
-        `<strong>Clarification Questions:</strong><br><br>${questions.replace(/\n/g,'<br>')}`;
-
-    generateFinal(raw, questions);
-}
-
-async function generateFinal(raw, questions) {
     document.getElementById("finalBox").classList.remove("hidden");
-    document.getElementById("finalBox").innerHTML = "Optimizing prompt...";
+    document.getElementById("finalBox").innerHTML = "Loading model or generating output...";
 
-    const fPrompt = `${SYSTEM_PROMPT}
+    const fullPrompt = `${SYSTEM_PROMPT}
 
-RAW PROMPT:
+RAW USER PROMPT:
 ${raw}
 
-REFINEMENT QUESTIONS:
-${questions}
+Begin the refinement process now.`;
 
-TASK: Produce the full structured optimized prompt now.`;
-
-    const finalOut = await runModel(fPrompt);
+    const result = await runModel(fullPrompt);
 
     document.getElementById("finalBox").innerHTML =
-        `<strong>Optimized Prompt:</strong><br><br>${finalOut.replace(/\n/g,'<br>')}`;
+        `<strong>Optimized Prompt:</strong><br><br>${result.replace(/\n/g,'<br>')}`;
 }
 </script>
 
