@@ -2,47 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AI Prompt Enhancer (Free)</title>
+<title>AI Prompt Enhancer – Free & Working</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 0; padding: 20px;
-        background: #fafafa;
-        color: #222;
-    }
-    h2 { text-align: center; }
-    .box {
-        background: white;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        margin-bottom: 20px;
-    }
-    textarea {
-        width: 100%;
-        height: 130px;
-        border: none;
-        outline: none;
-        resize: none;
-        font-size: 16px;
-    }
-    button {
-        width: 100%;
-        padding: 15px;
-        font-size: 18px;
-        border: none;
-        border-radius: 12px;
-        background: black;
-        color: white;
-        cursor: pointer;
-    }
-    .hidden { display: none; }
+body { font-family: Arial; padding: 20px; background: #fafafa; }
+.box { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+textarea { width: 100%; height: 140px; border: none; resize: none; outline: none; font-size: 16px; }
+button { width: 100%; padding: 15px; background: black; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 18px; }
+.hidden { display: none; }
 </style>
-</head>
 
+</head>
 <body>
+
 <h2>AI Prompt Enhancer</h2>
 
 <div class="box">
@@ -55,31 +28,41 @@
 <div id="finalBox" class="box hidden"></div>
 
 <script>
-const SYSTEM_PROMPT = `
+const ENGINEER_PROMPT = `
 ROLE
 You are an Expert Prompt Engineer...
-
-[ **KEEP YOUR LONG PROMPT EXACTLY AS BEFORE** ]
+(keep your full system prompt here)
 `;
 
-async function callAI(messages) {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+const HORDE_API_KEY = "0000000000"; // anonymous free key
+
+async function hordeGenerate(promptText) {
+    // Step 1: Submit job
+    const submit = await fetch("https://aihorde.net/api/v2/generate/text/async", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "apikey": HORDE_API_KEY
         },
         body: JSON.stringify({
-            model: "meta-llama/llama-3.2-1b-instruct",
-            messages: messages
+            prompt: promptText,
+            params: { max_length: 350 }
         })
     });
 
-    const data = await response.json();
+    const job = await submit.json();
+    const id = job.id;
 
-    try {
-        return data.choices[0].message.content;
-    } catch {
-        return "AI Error: " + JSON.stringify(data);
+    // Step 2: Poll for completion
+    while (true) {
+        const poll = await fetch(`https://aihorde.net/api/v2/generate/text/status/${id}`);
+        const result = await poll.json();
+
+        if (result.done === true) {
+            return result.generations[0].text;
+        }
+
+        await new Promise(r => setTimeout(r, 1500));
     }
 }
 
@@ -90,28 +73,45 @@ async function generateQuestions() {
     document.getElementById("questionsBox").classList.remove("hidden");
     document.getElementById("questionsBox").innerHTML = "Thinking...";
 
-    const q = await callAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: raw }
-    ]);
+    const prompt = `${ENGINEER_PROMPT}
+
+USER RAW PROMPT:
+${raw}
+
+Generate exactly 3 short, clear clarification questions.`;
+
+    const questions = await hordeGenerate(prompt);
 
     document.getElementById("questionsBox").innerHTML =
-        `<strong>Clarification Questions:</strong><br><br>${q.replace(/\n/g, '<br>')}`;
+        `<strong>Clarification Questions:</strong><br><br>${questions.replace(/\n/g,'<br>')}`;
 
-    generateFinal(raw, q);
+    generateFinal(raw, questions);
 }
 
-async function generateFinal(raw, q) {
+async function generateFinal(raw, questions) {
     document.getElementById("finalBox").classList.remove("hidden");
     document.getElementById("finalBox").innerHTML = "Optimizing...";
 
-    const finalOutput = await callAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `RAW PROMPT:\n${raw}\n\nQUESTIONS:\n${q}\n\nProduce the final optimized prompt.` }
-    ]);
+    const finalPrompt = `${ENGINEER_PROMPT}
+
+USER RAW PROMPT:
+${raw}
+
+CLARIFICATION QUESTIONS GENERATED:
+${questions}
+
+Now produce the final optimized structured prompt:
+- AI Role
+- Core Task
+- Constraints
+- Reasoning Instructions
+- Output Format
+- Key Improvements`;
+
+    const result = await hordeGenerate(finalPrompt);
 
     document.getElementById("finalBox").innerHTML =
-        `<strong>Optimized Prompt:</strong><br><br>${finalOutput.replace(/\n/g, '<br>')}`;
+        `<strong>Optimized Prompt:</strong><br><br>${result.replace(/\n/g,'<br>')}`;
 }
 </script>
 
