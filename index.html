@@ -2,21 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AI Prompt Enhancer – Free & Working</title>
+<title>Prompt Enhancer – Ultra Fast AI</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- WebLLM runtime -->
+<script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/dist/web-llm.min.js"></script>
 
 <style>
 body { font-family: Arial; padding: 20px; background: #fafafa; }
-.box { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-textarea { width: 100%; height: 140px; border: none; resize: none; outline: none; font-size: 16px; }
-button { width: 100%; padding: 15px; background: black; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 18px; }
+.box { background: white; padding: 15px; border-radius: 10px;
+       box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+textarea { width: 100%; height: 140px; border: none; resize: none;
+           outline: none; font-size: 16px; }
+button { width: 100%; padding: 15px; background: black; color: white;
+         border: none; border-radius: 10px; cursor: pointer;
+         font-size: 18px; }
 .hidden { display: none; }
 </style>
-
 </head>
+
 <body>
 
-<h2>AI Prompt Enhancer</h2>
+<h2>AI Prompt Enhancer (Phi-3 Mini – Fast Mode)</h2>
 
 <div class="box">
 <textarea id="rawPrompt" placeholder="Type your raw prompt..."></textarea>
@@ -28,42 +35,41 @@ button { width: 100%; padding: 15px; background: black; color: white; border: no
 <div id="finalBox" class="box hidden"></div>
 
 <script>
-const ENGINEER_PROMPT = `
-ROLE
-You are an Expert Prompt Engineer...
-(keep your full system prompt here)
+const SYSTEM_PROMPT = `
+You are an Expert Prompt Engineer. You improve raw user prompts with
+clarity, reasoning discipline, structure, and faithful intent preservation.
+
+Your job:
+1. Generate 3 clear refinement questions.
+2. Then produce a structured optimized prompt:
+
+STRUCTURED OPTIMIZED PROMPT
+- AI Role
+- Core Task
+- Constraints
+- Reasoning Instructions
+- Output Format
+
+KEY IMPROVEMENTS
+(Bullet points)
+
+Rules:
+• Do not invent facts.
+• Expand only when helpful.
+• Preserve exact meaning.
+• Keep language simple and powerful.
 `;
 
-const HORDE_API_KEY = "0000000000"; // anonymous free key
+let chat;
 
-async function hordeGenerate(promptText) {
-    // Step 1: Submit job
-    const submit = await fetch("https://aihorde.net/api/v2/generate/text/async", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "apikey": HORDE_API_KEY
-        },
-        body: JSON.stringify({
-            prompt: promptText,
-            params: { max_length: 350 }
-        })
-    });
-
-    const job = await submit.json();
-    const id = job.id;
-
-    // Step 2: Poll for completion
-    while (true) {
-        const poll = await fetch(`https://aihorde.net/api/v2/generate/text/status/${id}`);
-        const result = await poll.json();
-
-        if (result.done === true) {
-            return result.generations[0].text;
-        }
-
-        await new Promise(r => setTimeout(r, 1500));
-    }
+// Initialize Phi-3 Mini (VERY FAST)
+(async () => {
+    chat = await webllm.createChatSession("Phi-3-mini-4k-instruct-q4f16_1-MLC");
+})();
+  
+async function runModel(prompt) {
+    const reply = await chat.generate(prompt);
+    return reply;
 }
 
 async function generateQuestions() {
@@ -71,16 +77,17 @@ async function generateQuestions() {
     if (!raw) return;
 
     document.getElementById("questionsBox").classList.remove("hidden");
-    document.getElementById("questionsBox").innerHTML = "Thinking...";
+    document.getElementById("questionsBox").innerHTML =
+        "Loading model or thinking... (first run takes a few seconds)";
 
-    const prompt = `${ENGINEER_PROMPT}
+    const qPrompt = `${SYSTEM_PROMPT}
 
-USER RAW PROMPT:
+User raw prompt:
 ${raw}
 
-Generate exactly 3 short, clear clarification questions.`;
+TASK: Produce EXACTLY 3 refinement questions.`;
 
-    const questions = await hordeGenerate(prompt);
+    const questions = await runModel(qPrompt);
 
     document.getElementById("questionsBox").innerHTML =
         `<strong>Clarification Questions:</strong><br><br>${questions.replace(/\n/g,'<br>')}`;
@@ -90,28 +97,22 @@ Generate exactly 3 short, clear clarification questions.`;
 
 async function generateFinal(raw, questions) {
     document.getElementById("finalBox").classList.remove("hidden");
-    document.getElementById("finalBox").innerHTML = "Optimizing...";
+    document.getElementById("finalBox").innerHTML = "Optimizing prompt...";
 
-    const finalPrompt = `${ENGINEER_PROMPT}
+    const fPrompt = `${SYSTEM_PROMPT}
 
-USER RAW PROMPT:
+RAW PROMPT:
 ${raw}
 
-CLARIFICATION QUESTIONS GENERATED:
+REFINEMENT QUESTIONS:
 ${questions}
 
-Now produce the final optimized structured prompt:
-- AI Role
-- Core Task
-- Constraints
-- Reasoning Instructions
-- Output Format
-- Key Improvements`;
+TASK: Produce the full structured optimized prompt now.`;
 
-    const result = await hordeGenerate(finalPrompt);
+    const finalOut = await runModel(fPrompt);
 
     document.getElementById("finalBox").innerHTML =
-        `<strong>Optimized Prompt:</strong><br><br>${result.replace(/\n/g,'<br>')}`;
+        `<strong>Optimized Prompt:</strong><br><br>${finalOut.replace(/\n/g,'<br>')}`;
 }
 </script>
 
