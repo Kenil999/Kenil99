@@ -8,7 +8,7 @@ interface InputFormProps {
   isLoading: boolean;
 }
 
-export const InputForm: React.FC<InputFormProps> = ({ prompt, setPrompt, onEnhance, isLoading }) => {
+export const InputForm: React.FC<InputFormProps> = ({ prompt, setPrompt, onEnhance, isLoading const InputForm: React.FC<InputFormProps> = ({ prompt, setPrompt, onEnhance, isLoading }) => {}) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim() && !isLoading) {
